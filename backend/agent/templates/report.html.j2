@@ -1,0 +1,441 @@
+{% macro logo() %}<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#67e8f9"/></linearGradient></defs><circle cx="11" cy="11" r="7.2" stroke="url(#lg)" stroke-width="3"/><path d="M15.8 15.8 20.5 20.5" stroke="url(#lg)" stroke-width="3" stroke-linecap="round"/></svg>{% endmacro %}
+{% macro method(m) %}<span class="method m-{{ m }}">{{ m }}</span>{% endmacro %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ meta.title }} – API test report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+{% include "theme.css" %}
+
+/* ---------- report layout ---------- */
+.dash {
+  display: grid; grid-template-columns: 208px minmax(0, 1fr); border-radius: 18px; overflow: hidden;
+  border: 1px solid rgba(103, 232, 249, .22); background: #090e1a;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, .06), 0 40px 90px -30px rgba(34, 211, 238, .22);
+}
+.side { border-right: 1px solid var(--line); padding: 18px 12px; display: flex; flex-direction: column; gap: 4px; background: #080c17; }
+.side .brand { padding: 2px 8px 16px; font-size: 13px; }
+.side-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #aeb8c8; font-size: 12.5px; }
+.side-link svg { width: 15px; height: 15px; opacity: .85; }
+.side-link:hover, .side-link.active { background: rgba(255, 255, 255, .06); color: #fff; }
+.side-link .count { margin-left: auto; font-size: 11px; color: var(--dim); }
+.side-foot { margin-top: auto; padding: 12px 10px 2px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+.side-foot strong { display: block; color: var(--text); font-weight: 500; margin-top: 2px; word-break: break-all; }
+.dash-main { padding: 20px; min-width: 0; }
+.dash-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.dash-head h2 { font-size: 20px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #c3ccda; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+.stat .label { font-size: 13px; font-weight: 500; }
+.stat .sub { font-size: 11.5px; color: var(--muted); }
+.stat .value { font-size: 34px; letter-spacing: -.03em; margin: 14px 0 12px; font-weight: 500; }
+.stat .value small { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 2px; }
+.stat ul { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: grid; gap: 6px; font-size: 12px; color: #c3ccda; }
+.stat li { display: flex; gap: 8px; align-items: center; }
+
+.grid-3 { display: grid; grid-template-columns: 1.3fr 1fr 1.3fr; gap: 14px; margin-bottom: 14px; }
+.bars { position: relative; display: flex; gap: 14px; align-items: flex-end; height: 172px; padding: 0 4px 0 30px;
+  background-image: repeating-linear-gradient(to top, rgba(148,163,184,.08) 0 1px, transparent 1px 25%); background-size: 100% calc(100% - 34px); background-repeat: no-repeat; }
+.bars .axis { position: absolute; left: 0; top: 0; bottom: 34px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--dim); }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; min-width: 0; }
+.bar-track { flex: 1; width: 100%; max-width: 30px; display: flex; align-items: flex-end; }
+.bar { width: 100%; display: flex; flex-direction: column; border-radius: 6px 6px 3px 3px; overflow: hidden; min-height: 2px; }
+.bar-fail { background: linear-gradient(180deg, #e879f9, #a855f7); }
+.bar-pass { background: var(--grad-v); flex: 1 1 auto; }
+.bar-label { font-size: 10.5px; color: var(--muted); margin-top: 8px; }
+.bar-val { font-size: 10.5px; color: var(--dim); }
+.legend { display: flex; gap: 16px; justify-content: center; font-size: 11px; color: var(--muted); margin-top: 12px; }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+.donut-wrap { display: grid; place-items: center; gap: 10px; }
+.donut { width: 150px; height: 150px; }
+.donut text { fill: var(--text); font: 500 22px var(--font); }
+.donut .small { fill: var(--muted); font-size: 10px; font-weight: 400; }
+.sev { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 14px; width: 100%; font-size: 11.5px; color: var(--muted); }
+.sev span { display: flex; justify-content: space-between; }
+.sev b { color: var(--text); font-weight: 500; }
+
+.spark { width: 100%; height: 150px; display: block; }
+.spark-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.spark-meta b { color: var(--text); font-weight: 500; }
+
+.ep-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.ep-table th { text-align: left; font-weight: 400; color: var(--dim); font-size: 11.5px; padding: 0 10px 10px; }
+.ep-table td { padding: 9px 10px; border-top: 1px solid var(--line); vertical-align: middle; }
+.ep-table .path { font-family: var(--mono); font-size: 12px; }
+.meter { height: 6px; border-radius: 99px; background: rgba(148,163,184,.14); overflow: hidden; min-width: 90px; }
+.meter i { display: block; height: 100%; background: var(--grad); border-radius: 99px; }
+.meter.bad i { background: linear-gradient(90deg, #a855f7, #e879f9); }
+.table-scroll { overflow-x: auto; }
+
+/* results */
+.toolbar { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+.toolbar .input { width: 240px; padding: 8px 12px; border-radius: 999px; }
+.count-note { text-align: center; color: var(--dim); font-size: 12px; margin: -6px 0 14px; }
+.results { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: rgba(10,15,28,.7); }
+.result { border-top: 1px solid var(--line); }
+.result:first-child { border-top: 0; }
+.result > summary {
+  list-style: none; cursor: pointer; display: grid; align-items: center; gap: 12px; padding: 11px 16px;
+  grid-template-columns: 62px minmax(180px, 1.2fr) minmax(200px, 1.6fr) 88px 110px 64px 62px; font-size: 12.5px;
+}
+.result > summary::-webkit-details-marker { display: none; }
+.result > summary:hover { background: rgba(255,255,255,.025); }
+.result[open] > summary { background: rgba(59,130,246,.06); }
+.result .rid { font-family: var(--mono); color: var(--dim); font-size: 11.5px; }
+.result .ep { display: flex; align-items: center; gap: 8px; min-width: 0; font-family: var(--mono); font-size: 11.5px; color: #c3ccda; }
+.result .ep span:last-child, .result .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result .codes { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.result .codes b { color: var(--text); font-weight: 500; }
+.result .ms { color: var(--dim); font-size: 11.5px; text-align: right; }
+.detail { padding: 4px 16px 18px 90px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.detail h4 { margin: 10px 0 6px; font-weight: 500; font-size: 12px; color: var(--muted); }
+.detail p { margin: 0 0 4px; color: #c3ccda; font-size: 12.5px; }
+pre {
+  margin: 0; padding: 12px; background: #060a14; border: 1px solid var(--line); border-radius: var(--r-sm);
+  font: 11.5px/1.5 var(--mono); color: #c9d4e5; overflow: auto; max-height: 280px; white-space: pre-wrap; word-break: break-word;
+}
+.err { color: #f5a3f7; font-family: var(--mono); font-size: 11.5px; margin: 2px 0; }
+
+/* failures & edge cases */
+.cards-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.cards-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.fail-card h3 { font-size: 15px; margin: 10px 0 4px; }
+.fail-card .ep { display: flex; gap: 8px; align-items: center; font-family: var(--mono); font-size: 11.5px; color: #c3ccda; margin-bottom: 12px; }
+.kv { display: grid; grid-template-columns: 96px 1fr; gap: 8px 12px; font-size: 12.5px; padding: 12px 0; border-top: 1px solid var(--line); }
+.kv dt { color: var(--dim); }
+.kv dd { margin: 0; color: #d3dbe7; }
+.fail-card details summary { cursor: pointer; font-size: 12px; color: var(--cyan); margin-top: 6px; }
+.fail-card details pre { margin-top: 8px; }
+.edge-card h3 { font-size: 14.5px; margin: 10px 0 6px; line-height: 1.35; }
+.edge-card .op { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.edge-card p { color: #b9c3d3; font-size: 12.5px; margin: 0 0 12px; }
+.edge-card .try { font-size: 12px; color: #d3dbe7; padding: 10px 12px; background: rgba(59,130,246,.07); border: 1px solid rgba(59,130,246,.18); border-radius: var(--r-sm); }
+.edge-card .try b { font-weight: 500; color: var(--cyan); display: block; margin-bottom: 2px; font-size: 11px; }
+.empty { text-align: center; color: var(--muted); padding: 30px; }
+.foot { text-align: center; color: var(--dim); font-size: 12px; margin-top: 60px; }
+
+@media (max-width: 1100px) {
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+  .grid-3 > :last-child { grid-column: 1 / -1; }
+  .cards-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .dash { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3, .cards-2, .cards-3 { grid-template-columns: 1fr; }
+  .result > summary { grid-template-columns: 58px 1fr 62px; }
+  .result > summary .ep, .result > summary .cat, .result > summary .codes, .result > summary .ms { display: none; }
+  .detail { grid-template-columns: 1fr; padding-left: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="frame">
+
+  <nav class="nav" aria-label="Report sections">
+    <a class="brand" href="#top">{{ logo() }}<span>API Testing Agent</span></a>
+    <div class="nav-links">
+      <a href="#summary">Summary</a><a href="#endpoints">Endpoints</a><a href="#results">Results</a>
+      <a href="#failures">Failures</a><a href="#edge-cases">Edge cases</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="report.json" download>Download JSON</a>
+  </nav>
+
+  <header class="hero" id="top">
+    <span class="pill">Test report · {{ meta.generated_at_human }}</span>
+    <h1>{{ meta.title }} test results</h1>
+    <p class="lead">{{ s.total }} generated tests across {{ s.endpoints }} endpoints, executed against <code>{{ meta.base_url }}</code>.
+      {% if s.failed %}{{ s.failed }} need attention.{% else %}Everything passed.{% endif %}</p>
+    <div class="hero-cta">
+      <a class="btn btn-ghost" href="#failures">Review {{ s.failed }} failure{{ '' if s.failed == 1 else 's' }}</a>
+      <a class="btn btn-primary" href="#edge-cases">See {{ s.edge_cases }} uncovered edge cases</a>
+    </div>
+  </header>
+
+  <section class="dash" id="summary">
+    <aside class="side">
+      <div class="brand">{{ logo() }}<span>Test Agent</span></div>
+      <a class="side-link active" href="#summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Summary</a>
+      <a class="side-link" href="#endpoints"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg>Endpoints<span class="count">{{ s.endpoints }}</span></a>
+      <a class="side-link" href="#results"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Results<span class="count">{{ s.total }}</span></a>
+      <a class="side-link" href="#failures"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Failures<span class="count">{{ s.failed }}</span></a>
+      <a class="side-link" href="#edge-cases"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Edge cases<span class="count">{{ s.edge_cases }}</span></a>
+      <div class="side-foot">Analysis engine
+        <strong>{% if meta.llm.enabled %}{{ meta.llm.provider }} · {{ meta.llm.model }}{% else %}Rule-based (no LLM){% endif %}</strong>
+      </div>
+    </aside>
+
+    <div class="dash-main">
+      <div class="dash-head">
+        <h2>Dashboard</h2>
+        <div class="chips">
+          <span class="chip">OpenAPI {{ meta.openapi_version }}</span>
+          <span class="chip">API v{{ meta.version }}</span>
+          <span class="chip">{{ meta.duration_s }} s run</span>
+          {% for n in meta.provisioned %}<span class="chip" title="Created before the run so path ids point at real data">Setup {{ n.split(' via ')[0] }}</span>{% endfor %}
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="card stat">
+          <div class="label">Total tests</div><div class="sub">{{ s.endpoints }} endpoints</div>
+          <div class="value">{{ s.total }}</div>
+          <ul>
+            <li><span class="check">✓</span>{{ s.by_source.get('rules', 0) }} from spec rules</li>
+            <li><span class="check">✓</span>{{ s.by_source.get('llm', 0) }} from LLM</li>
+          </ul>
+        </div>
+        <div class="card stat featured">
+          <div class="label">Pass rate</div><div class="sub">{{ s.passed }} of {{ s.total }} passed</div>
+          <div class="value">{{ s.pass_rate }}<small>%</small></div>
+          <ul>
+            <li><span class="check">✓</span>{{ s.passed }} passed</li>
+            <li><span class="check">✓</span>{{ s.failed }} failed</li>
+          </ul>
+        </div>
+        <div class="card stat">
+          <div class="label">Failures</div><div class="sub">by type</div>
+          <div class="value">{{ s.failed }}</div>
+          <ul>
+            {% for t, n in s.failure_types.items() %}{% if loop.index <= 3 %}<li><span class="check">✓</span>{{ n }} × {{ t }}</li>{% endif %}{% else %}<li class="muted">No failures</li>{% endfor %}
+          </ul>
+        </div>
+        <div class="card stat">
+          <div class="label">Latency</div><div class="sub">per request</div>
+          <div class="value">{{ s.avg_ms }}<small>ms avg</small></div>
+          <ul>
+            <li><span class="check">✓</span>p95 {{ s.p95_ms }} ms</li>
+            <li><span class="check">✓</span>max {{ s.max_ms }} ms</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">Results by category <span class="more">···</span></div>
+          <div class="bars">
+            <div class="axis"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0</span></div>
+            {% for c in s.by_category %}
+            <div class="bar-col" title="{{ c.name }}: {{ c.passed }} passed, {{ c.failed }} failed">
+              <div class="bar-track"><div class="bar" style="height: {{ c.height }}%">
+                <div class="bar-fail" style="height: {{ c.fail_pct }}%"></div>
+                <div class="bar-pass"></div>
+              </div></div>
+              <span class="bar-label">{{ c.name|capitalize }}</span><span class="bar-val">{{ c.passed }}/{{ c.total }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="legend"><span><i style="background:#38bdf8"></i>Passed</span><span><i style="background:#d946ef"></i>Failed</span></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Pass / fail <span class="more">···</span></div>
+          <div class="donut-wrap">
+            <svg class="donut" viewBox="0 0 140 140" role="img" aria-label="{{ s.pass_rate }} percent passed">
+              <defs><linearGradient id="dg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#67e8f9"/></linearGradient></defs>
+              <circle cx="70" cy="70" r="54" fill="none" stroke="rgba(217,70,239,.55)" stroke-width="12"/>
+              <circle cx="70" cy="70" r="54" fill="none" stroke="url(#dg)" stroke-width="12" stroke-linecap="round"
+                      stroke-dasharray="{{ charts.donut_dash }} {{ charts.donut_circ }}" transform="rotate(-90 70 70)"/>
+              <text x="70" y="72" text-anchor="middle">{{ s.pass_rate }}%</text>
+              <text x="70" y="90" text-anchor="middle" class="small">passed</text>
+            </svg>
+            <div class="sev">
+              {% for k, v in s.severities.items() %}<span><span class="tag sev-{{ k }}">{{ k }}</span><b>{{ v }}</b></span>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Response time per test <span class="more">···</span></div>
+          <svg class="spark" viewBox="0 0 520 150" preserveAspectRatio="none" role="img" aria-label="Response time per test">
+            <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#38bdf8" stop-opacity=".35"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/></linearGradient></defs>
+            <g stroke="rgba(148,163,184,.08)"><line x1="0" y1="37" x2="520" y2="37"/><line x1="0" y1="75" x2="520" y2="75"/><line x1="0" y1="112" x2="520" y2="112"/></g>
+            <path d="{{ charts.latency.area }}" fill="url(#sg)"/>
+            <polyline points="{{ charts.latency.line }}" fill="none" stroke="#38bdf8" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="spark-meta"><span>TC-001</span><span>avg <b>{{ s.avg_ms }} ms</b> · max <b>{{ s.max_ms }} ms</b></span><span>TC-{{ '%03d' % s.total }}</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="endpoints">
+        <div class="card-title">Endpoint health <span class="more">···</span></div>
+        <div class="table-scroll">
+        <table class="ep-table">
+          <thead><tr><th>Endpoint</th><th>Summary</th><th>Documented</th><th>Tests</th><th>Pass rate</th><th>Status</th></tr></thead>
+          <tbody>
+          {% for e in endpoints %}
+            <tr>
+              <td style="white-space:nowrap">{{ method(e.method) }} <span class="path">{{ e.path }}</span></td>
+              <td class="muted">{{ e.summary or '–' }}</td>
+              <td class="dim mono">{{ e.documented|join(' ') }}</td>
+              <td>{{ e.total }}</td>
+              <td><div class="meter{{ ' bad' if e.failed }}"><i style="width: {{ e.pass_pct }}%"></i></div></td>
+              <td>{% if e.failed %}<span class="tag fail">{{ e.failed }} failing</span>{% else %}<span class="tag pass">Healthy</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ results -->
+  <div class="section-head" id="results">
+    <span class="pill">Results</span>
+    <h2>Every generated test case</h2>
+    <p>Positive, negative, validation, boundary and edge scenarios derived from the spec. Open a row to see the exact request and response.</p>
+  </div>
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="Filter by status">
+      <button class="active" data-fstatus="all">All</button><button data-fstatus="failed">Failed</button><button data-fstatus="passed">Passed</button>
+    </div>
+    <div class="seg" role="group" aria-label="Filter by category">
+      <button class="active" data-fcat="all">All types</button>
+      {% for c in s.by_category if c.total %}<button data-fcat="{{ c.name }}">{{ c.name|capitalize }}</button>{% endfor %}
+    </div>
+    <input class="input" id="q" type="search" placeholder="Search tests or paths" aria-label="Search tests">
+  </div>
+  <p class="count-note"><span id="shown">{{ s.total }}</span> of {{ s.total }} tests shown</p>
+
+  <div class="results">
+  {% for r in results %}
+    <details class="result" data-status="{{ 'passed' if r.passed else 'failed' }}" data-cat="{{ r.category }}"
+             data-search="{{ (r.id ~ ' ' ~ r.name ~ ' ' ~ r.method ~ ' ' ~ r.path)|lower }}">
+      <summary>
+        <span class="rid">{{ r.id }}</span>
+        <span class="ep">{{ method(r.method) }}<span>{{ r.path }}</span></span>
+        <span class="nm">{{ r.name }}{% if r.source == 'llm' %} <span class="tag ai">AI</span>{% endif %}</span>
+        <span class="cat"><span class="tag neutral">{{ r.category }}</span></span>
+        <span class="codes">{{ r.expected|join('/') }} → <b>{{ r.actual if r.actual is not none else 'ERR' }}</b></span>
+        <span class="ms">{{ r.duration_ms }} ms</span>
+        <span>{% if r.passed %}<span class="tag pass">Pass</span>{% else %}<span class="tag fail">Fail</span>{% endif %}</span>
+      </summary>
+      <div class="detail">
+        <div>
+          <h4>What it checks</h4><p>{{ r.description }}</p>
+          <h4>Request</h4><pre>{{ r.method|upper }} {{ r.url }}{% if r.request.headers %}
+
+headers: {{ r.request.headers|pretty }}{% endif %}{% if r.request.body is not none %}
+
+body: {{ r.request.body|pretty }}{% endif %}</pre>
+        </div>
+        <div>
+          {% if r.errors or r.schema_errors %}<h4>Errors</h4>
+            {% for e in r.errors %}<p class="err">{{ e }}</p>{% endfor %}
+            {% for e in r.schema_errors %}<p class="err">· {{ e }}</p>{% endfor %}
+          {% endif %}
+          <h4>Response ({{ r.actual if r.actual is not none else 'no response' }})</h4><pre>{{ r.response_body|pretty }}</pre>
+        </div>
+      </div>
+    </details>
+  {% endfor %}
+  </div>
+
+  <!-- ----------------------------------------------------------- failures -->
+  <div class="section-head" id="failures">
+    <span class="pill">Failures</span>
+    <h2>What broke and why</h2>
+    <p>Expected versus actual behaviour, with the most likely cause and a concrete fix. Sorted by severity.</p>
+  </div>
+  {% if failures %}
+  <div class="cards-2">
+    {% for f in failures %}
+    <article class="card fail-card{{ ' featured' if loop.first }}">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="tag sev-{{ f.analysis.severity }}">{{ f.analysis.severity }}</span>
+        <span class="tag neutral">{{ f.analysis.failure_type }}</span>
+        {% if f.analysis.analyzed_by == 'ai' %}<span class="tag ai">AI analysis</span>{% endif %}
+        <span class="dim mono" style="margin-left:auto;font-size:11px">{{ f.id }}</span>
+      </div>
+      <h3>{{ f.name }}</h3>
+      <div class="ep">{{ method(f.method) }}<span>{{ f.path }}</span></div>
+      <dl class="kv">
+        <dt>Expected</dt><dd class="mono">{{ f.expected|join(' or ') }}</dd>
+        <dt>Actual</dt><dd class="mono">{{ f.actual if f.actual is not none else 'no response' }}{% if f.schema_errors %} · {{ f.schema_errors[0] }}{% endif %}</dd>
+        <dt>Finding</dt><dd>{{ f.analysis.summary }}</dd>
+        <dt>Likely cause</dt><dd>{{ f.analysis.likely_cause }}</dd>
+        <dt>Suggested fix</dt><dd>{{ f.analysis.suggestion }}</dd>
+      </dl>
+      <details><summary>Show request &amp; response</summary>
+        <pre>{{ f.method|upper }} {{ f.url }}{% if f.request.body is not none %}
+
+body: {{ f.request.body|pretty }}{% endif %}</pre>
+        <pre style="margin-top:8px">{{ f.response_body|pretty }}</pre>
+      </details>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty">All {{ s.total }} tests passed. Check the uncovered edge cases below for what to test next.</div>
+  {% endif %}
+
+  <!-- --------------------------------------------------------- edge cases -->
+  <div class="section-head" id="edge-cases">
+    <span class="pill">Edge cases</span>
+    <h2>What this run didn't cover</h2>
+    <p>Gaps found by comparing the spec with what was actually exercised, plus suggested tests to add next.</p>
+  </div>
+  {% if edge_cases %}
+  <div class="cards-3">
+    {% for g in edge_cases %}
+    <article class="card edge-card">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="tag sev-{{ 'critical' if g.priority == 'high' else ('medium' if g.priority == 'medium' else 'low') }}">{{ g.priority }} priority</span>
+        {% if g.source == 'ai' %}<span class="tag ai">AI</span>{% endif %}
+      </div>
+      <h3>{{ g.title }}</h3>
+      <div class="op" style="margin-bottom:8px">{{ g.operation }}</div>
+      <p>{{ g.detail }}</p>
+      <div class="try"><b>Suggested test</b>{{ g.suggested_test }}</div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card empty">No uncovered edge cases detected.</div>
+  {% endif %}
+
+  <p class="foot">Spec: <span class="mono">{{ meta.spec_source }}</span> · Generated {{ meta.generated_at }} · Run {{ meta.run_id }}</p>
+</div>
+</div>
+
+<script>
+(() => {
+  const rows = [...document.querySelectorAll('.result')];
+  const state = { status: 'all', cat: 'all', q: '' };
+  const shown = document.getElementById('shown');
+  const apply = () => {
+    let n = 0;
+    for (const r of rows) {
+      const ok = (state.status === 'all' || r.dataset.status === state.status)
+        && (state.cat === 'all' || r.dataset.cat === state.cat)
+        && (!state.q || r.dataset.search.includes(state.q));
+      r.hidden = !ok; if (ok) n++;
+    }
+    shown.textContent = n;
+  };
+  const bind = (attr, key) => document.querySelectorAll(`[data-${attr}]`).forEach(btn => btn.addEventListener('click', () => {
+    btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    state[key] = btn.dataset[attr]; apply();
+  }));
+  bind('fstatus', 'status'); bind('fcat', 'cat');
+  document.getElementById('q').addEventListener('input', e => { state.q = e.target.value.trim().toLowerCase(); apply(); });
+  const links = [...document.querySelectorAll('.side-link')];
+  const io = new IntersectionObserver(entries => entries.forEach(en => {
+    if (en.isIntersecting) links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + en.target.id));
+  }), { rootMargin: '-40% 0px -55% 0px' });
+  ['summary', 'endpoints', 'results', 'failures', 'edge-cases'].forEach(id => { const el = document.getElementById(id); if (el) io.observe(el); });
+})();
+</script>
+</body>
+</html>

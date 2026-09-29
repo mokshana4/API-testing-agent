@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens (RGB triplets so Tailwind can apply alpha: bg-card/80, border-line/15 ...) */
+:root {
+  --bg: 244 247 251;
+  --panel: 255 255 255;
+  --card: 255 255 255;
+  --elevated: 241 245 249;
+  --line: 100 116 139;
+  --fg: 15 23 42;
+  --muted: 71 85 105;
+  --dim: 148 163 184;
+  --pass: 13 148 136;
+  --fail: 192 38 211;
+  --err: 225 29 72;
+  --warn: 217 119 6;
+  color-scheme: light;
+}
+.dark {
+  --bg: 5 8 15;
+  --panel: 8 12 23;
+  --card: 14 21 38;
+  --elevated: 20 28 47;
+  --line: 148 163 184;
+  --fg: 230 237 247;
+  --muted: 139 149 168;
+  --dim: 93 104 128;
+  --pass: 45 212 191;
+  --fail: 217 70 239;
+  --err: 251 113 133;
+  --warn: 245 158 11;
+  color-scheme: dark;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+    font-size: 14px;
+    background-image:
+      radial-gradient(1000px 480px at 22% -8%, rgba(59, 130, 246, .10), transparent 62%),
+      radial-gradient(700px 380px at 100% 0%, rgba(34, 211, 238, .08), transparent 60%);
+    background-attachment: fixed;
+  }
+  .dark body {
+    background-image:
+      radial-gradient(1100px 520px at 25% -8%, rgba(20, 118, 150, .30), transparent 62%),
+      radial-gradient(760px 420px at 100% 4%, rgba(59, 130, 246, .10), transparent 60%);
+  }
+  :focus-visible { @apply outline-none ring-2 ring-brand-cyan/70 ring-offset-0 rounded-md; }
+  ::selection { background: rgba(96, 165, 250, .3); }
+  * { scrollbar-width: thin; scrollbar-color: rgb(var(--line) / .3) transparent; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line/15 bg-card/90 shadow-sm dark:shadow-none;
+  }
+  .dark .card { background-image: linear-gradient(180deg, rgba(20, 28, 47, .92), rgba(12, 18, 32, .92)); }
+  .card-featured {
+    @apply rounded-2xl border border-brand-sky/50 shadow-featured;
+    background: radial-gradient(130% 100% at 50% -10%, rgba(59, 130, 246, .16), rgb(var(--card)) 62%);
+  }
+  .dark .card-featured { background: radial-gradient(130% 100% at 50% -10%, rgba(59, 130, 246, .32), rgba(14, 21, 38, .96) 62%); }
+
+  .input {
+    @apply w-full rounded-xl border border-line/25 bg-elevated/60 px-3 py-2.5 text-[13px] text-fg placeholder:text-dim
+           transition focus:border-brand-cyan/60 focus:outline-none focus:ring-4 focus:ring-brand-cyan/10;
+  }
+  .dark .input { background: rgba(4, 8, 16, .55); }
+
+  .label { @apply mb-1.5 block text-xs font-medium text-muted; }
+  .kbd { @apply rounded border border-line/25 bg-elevated px-1.5 py-0.5 font-mono text-[10.5px] text-muted; }
+  .grid-bg {
+    background-image: repeating-linear-gradient(to top, rgb(var(--line) / .10) 0 1px, transparent 1px 25%);
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-gradient {
+    background: linear-gradient(180deg, rgb(var(--fg)) 0%, rgb(var(--muted)) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+}

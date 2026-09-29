@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+reports/*
+!reports/.gitkeep
+.pytest_cache/
+node_modules/
+.next/
+backend/reports/*
+!backend/reports/.gitkeep

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Testing Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+{% include "theme.css" %}
+.run-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; max-width: 1000px; margin: 0 auto; }
+.form-card h2 { font-size: 18px; margin-bottom: 4px; }
+.form-card .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 18px; }
+.or { text-align: center; color: var(--dim); font-size: 11.5px; margin: -4px 0 10px; }
+.file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: var(--r-sm); color: var(--muted); font-size: 12.5px; cursor: pointer; }
+.file:hover { border-color: rgba(103,232,249,.5); color: var(--text); }
+.file input { display: none; }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0 16px; font-size: 13px; }
+.toggle small { display: block; color: var(--muted); font-size: 11.5px; }
+.switch { position: relative; width: 40px; height: 22px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch span { position: absolute; inset: 0; border-radius: 99px; background: #273044; transition: background .2s; cursor: pointer; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.switch input:checked + span { background: var(--grad); }
+.switch input:checked + span::after { transform: translateX(18px); }
+.switch input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.status { margin-top: 12px; font-size: 12.5px; min-height: 18px; color: var(--muted); }
+.status.error { color: #f5a3f7; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.steps li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-sm); background: rgba(10,15,28,.6); }
+.steps li b { font-weight: 500; display: block; font-size: 13px; }
+.steps li span { color: var(--muted); font-size: 12px; }
+.steps .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; color: #04111e; background: var(--grad); font-weight: 600; }
+.steps li.running { border-color: rgba(103,232,249,.45); }
+.runs { max-width: 1000px; margin: 0 auto; display: grid; gap: 8px; }
+.run-row { display: grid; grid-template-columns: 150px 1fr 90px 120px; gap: 14px; align-items: center; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r-sm); background: rgba(12,18,32,.8); font-size: 13px; }
+.run-row:hover { border-color: rgba(96,165,250,.45); }
+.meter { height: 6px; border-radius: 99px; background: rgba(148,163,184,.14); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--grad); }
+@media (max-width: 860px) { .run-grid { grid-template-columns: 1fr; } .run-row { grid-template-columns: 1fr 80px; } .run-row .hide-sm { display: none; } }
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="frame">
+  <nav class="nav">
+    <a class="brand" href="/"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#67e8f9"/></linearGradient></defs><circle cx="11" cy="11" r="7.2" stroke="url(#lg)" stroke-width="3"/><path d="M15.8 15.8 20.5 20.5" stroke="url(#lg)" stroke-width="3" stroke-linecap="round"/></svg><span>API Testing Agent</span></a>
+    <div class="nav-links"><a href="#run">Run</a><a href="#recent">Recent reports</a><a href="/docs">API docs</a></div>
+    <a class="btn btn-primary btn-sm" href="/reports/latest/report.html">Latest report</a>
+  </nav>
+
+  <header class="hero">
+    <span class="pill">OpenAPI · Swagger 2.0 / 3.x</span>
+    <h1>From API spec to test report</h1>
+    <p class="lead">Point the agent at a spec. It generates positive, negative, validation, boundary and edge-case tests, runs them, explains the failures and lists what is still untested.</p>
+  </header>
+
+  <div class="run-grid" id="run">
+    <form class="card featured form-card" id="run-form">
+      <h2>Run the agent</h2>
+      <p class="sub">Only the spec is required. The base URL defaults to the spec's server.</p>
+      <div class="field">
+        <label for="spec_url">Spec URL</label>
+        <input class="input" id="spec_url" name="spec_url" placeholder="http://127.0.0.1:8001/openapi.json">
+      </div>
+      <p class="or">or</p>
+      <label class="file" for="spec_file"><input type="file" id="spec_file" name="spec_file" accept=".json,.yaml,.yml">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+        <span id="file-label">Upload a .json or .yaml spec</span></label>
+      <div class="field" style="margin-top:14px">
+        <label for="base_url">Base URL (optional)</label>
+        <input class="input" id="base_url" name="base_url" placeholder="http://127.0.0.1:8001">
+      </div>
+      <div class="field">
+        <label for="auth_header">Auth header (optional)</label>
+        <input class="input" id="auth_header" name="auth_header" placeholder="Authorization: Bearer eyJ...">
+      </div>
+      <div class="toggle">
+        <div>Use LLM<small>Extra AI test ideas and failure analysis. Needs an API key in .env.</small></div>
+        <label class="switch"><input type="checkbox" id="use_llm" checked><span></span></label>
+      </div>
+      <button class="btn btn-primary" style="width:100%" type="submit" id="run-btn">Run tests</button>
+      <div class="status" id="status" role="status"></div>
+    </form>
+
+    <div>
+      <ol class="steps" id="steps">
+        <li><span class="n">1</span><div><b>Parse the spec</b><span>Endpoints, parameters, schemas and status codes.</span></div></li>
+        <li><span class="n">2</span><div><b>Generate tests</b><span>Rules from constraints, plus LLM scenarios.</span></div></li>
+        <li><span class="n">3</span><div><b>Execute</b><span>Real HTTP calls; status and response schema checked.</span></div></li>
+        <li><span class="n">4</span><div><b>Analyze failures</b><span>Expected vs actual, likely cause, suggested fix.</span></div></li>
+        <li><span class="n">5</span><div><b>Find uncovered edge cases</b><span>What the spec promises that no test exercised.</span></div></li>
+        <li><span class="n">6</span><div><b>Write the report</b><span>HTML for people, JSON for pipelines.</span></div></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="section-head" id="recent">
+    <span class="pill">Reports</span>
+    <h2>Recent runs</h2>
+  </div>
+  <div class="runs">
+    {% for r in runs %}
+    <a class="run-row" href="/reports/{{ r.id }}/report.html">
+      <span class="mono dim">{{ r.id }}</span>
+      <span>{{ r.title }} <span class="muted">· {{ r.total }} tests</span></span>
+      <span class="hide-sm"><span class="meter"><i style="width: {{ r.pass_rate }}%"></i></span></span>
+      <span>{% if r.failed %}<span class="tag fail">{{ r.failed }} failed</span>{% else %}<span class="tag pass">All passed</span>{% endif %}</span>
+    </a>
+    {% else %}
+    <div class="card" style="text-align:center;color:var(--muted)">No reports yet. Run the agent above to create the first one.</div>
+    {% endfor %}
+  </div>
+</div>
+</div>
+<script>
+(() => {
+  const form = document.getElementById('run-form'), btn = document.getElementById('run-btn');
+  const status = document.getElementById('status'), file = document.getElementById('spec_file');
+  const steps = [...document.querySelectorAll('#steps li')];
+  file.addEventListener('change', () => { document.getElementById('file-label').textContent = file.files[0]?.name || 'Upload a .json or .yaml spec'; });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    data.set('use_llm', document.getElementById('use_llm').checked ? 'true' : 'false');
+    if (!file.files.length) data.delete('spec_file');
+    btn.disabled = true; btn.textContent = 'Running tests…'; status.className = 'status'; status.textContent = '';
+    let i = 0; const tick = setInterval(() => { steps.forEach((s, k) => s.classList.toggle('running', k === i % steps.length)); i++; }, 900);
+    try {
+      const res = await fetch('/api/run', { method: 'POST', body: data });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.detail || res.statusText);
+      status.textContent = `${body.summary.passed}/${body.summary.total} passed. Opening report…`;
+      window.location.href = body.report_url;
+    } catch (err) {
+      status.className = 'status error'; status.textContent = `Run failed: ${err.message}`;
+      btn.disabled = false; btn.textContent = 'Run tests';
+    } finally { clearInterval(tick); steps.forEach(s => s.classList.remove('running')); }
+  });
+})();
+</script>
+</body>
+</html>
